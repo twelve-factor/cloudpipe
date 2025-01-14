@@ -22,7 +22,9 @@ type ServerConfig struct {
 	Prefix string
 }
 
-const configKey = "config"
+type contextKey string
+
+const configKey contextKey = "config"
 
 // Middleware to add configuration to the context
 func configMiddleware(config ServerConfig, next http.Handler) http.Handler {
@@ -673,7 +675,7 @@ func updatePipe(resource *Resource, pid string, w http.ResponseWriter, r *http.R
 	}
 	resource.Pipes[pid] = &p
 	if !p.This.Equals(this) {
-		sc := r.Context().Value("config").(ServerConfig)
+		sc := r.Context().Value(configKey).(ServerConfig)
 		maybeUpdateOther(&p, &sc)
 	}
 	if resource.UpdateCallback != nil && (!p.This.Equals(this) || !p.Other.Equals(other)) {
