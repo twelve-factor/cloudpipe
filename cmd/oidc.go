@@ -64,7 +64,7 @@ func notImplementedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func openIDConfigHandler(w http.ResponseWriter, r *http.Request) {
-	sc := r.Context().Value("config").(ServerConfig)
+	sc := r.Context().Value(configKey).(ServerConfig)
 	config := map[string]interface{}{
 		"issuer":                                sc.Prefix,
 		"authorization_endpoint":                sc.Prefix + "/authorize",

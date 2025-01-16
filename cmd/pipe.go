@@ -206,13 +206,6 @@ func (e *End) Equals(other End) bool {
 		bytes.Equal(e.Data, other.Data)
 }
 
-func cleanupSchema(schema *jsonschema.Schema) {
-	if schema == nil {
-		return
-	}
-	schema.AdditionalProperties = nil
-}
-
 const schemaVersion = "https://json-schema.org/draft/2020-12/schema"
 
 func generateSchema(items []any) (*jsonschema.Schema, error) {
@@ -316,11 +309,11 @@ func (e *End) Validate() error {
 	}
 
 	if !result.Valid() {
-		s := fmt.Sprintf("Data does not match schema. see errors :\n")
+		s := "Data does not match schema. see errors :\n"
 		for _, desc := range result.Errors() {
 			s = fmt.Sprintf("%s- %s\n", s, desc)
 		}
-		return fmt.Errorf(s)
+		return fmt.Errorf("%s", s)
 	}
 	return nil
 }
@@ -380,7 +373,7 @@ func (p *Pipe) Merge(o *Pipe) error {
 }
 
 func isJSONEmpty(raw json.RawMessage) bool {
-	if raw == nil || len(raw) == 0 || string(raw) == "null" {
+	if len(raw) == 0 || string(raw) == "null" {
 		return true
 	}
 	return false
