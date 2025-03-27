@@ -124,8 +124,3 @@ Imagine you need to extend Jasmine's app to pull customer data exposed by a serv
 ### Unique adapters
 
 One of the powers of the cloudpipe definition is the ability to introduce new types of configuration information that can become standardized. For example, LLM agents can use 'tools' which are custom functions exposed over http with metadata about how to call them, generally in the form of jsonschema. Unfortunately configuring your agent to use the tool requires different metadata and custom authentication depending on the provider. If we defined a new `meta:llm-tool` adapter standardizing the format, the heroku cloudpipe broker could expose it, and providing your tool to any llm would take the form of a cloudpipe binding using the new adapter. I could attach the same tool to openai, anthropic, meta, or bedrock using the same commands and even authenticate incoming commands using a standard adapter like `auth:oidc`.
-
-## Where Do We Go From Here?
-
-Some early prototype code is available at https://github.com/heroku/cloudpipe. My intention is to introduce something like this as part of the future of Twelve Factor. Connections are an important part of extending twelve factor beyond a single application. Assuming we can build some support for this idea in the community, this could even become a CNCF project. It's a lot to expect big players to implement brokers before there is any traction, but we can fill in the gaps by building brokers that work on behalf of other resources. The next step would be to solidify the spec and build example brokers for kubernetes and a few aws services.
-
