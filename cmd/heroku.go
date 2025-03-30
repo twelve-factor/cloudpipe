@@ -40,6 +40,7 @@ func getResourceHeroku(name string, url string, discover bool, updater configUpd
 	if discover {
 		// TODO: use local run:insade to call `factor issuer` and parse output
 	}
+	
 	return getResource(name, url, iss, sub, updater)
 }
 
@@ -79,6 +80,28 @@ func runHeroku() error {
 		for _, app := range apps {
 			r := getResourceHeroku(app.Name, app.WebURL, discover, updater)
 			resources[r.ID] = r
+			
+			// Create a retriever function for this app
+			appName := app.Name
+			retriever := configRetriever(func() []string {
+				envVars := []string{}
+				
+				// Get config vars from Heroku
+				if configVars, err := client.ConfigVarInfoForApp(context.TODO(), appName); err == nil {
+					for key, value := range configVars {
+						if value != nil {
+							envVars = append(envVars, fmt.Sprintf("%s=%s", key, *value))
+						}
+					}
+				} else {
+					log.Warnf("Failed to retrieve config vars for %s: %v", appName, err)
+				}
+				
+				return envVars
+			})
+			
+			// Scan environment for pre-existing pipes
+			buildPipesFromEnv(r, retriever)
 		}
 	} else {
 		apps, err := client.TeamAppListByTeam(context.TODO(), teamName, nil)
@@ -88,6 +111,28 @@ func runHeroku() error {
 		for _, app := range apps {
 			r := getResourceHeroku(app.Name, app.WebURL, discover, updater)
 			resources[r.ID] = r
+			
+			// Create a retriever function for this app
+			appName := app.Name
+			retriever := configRetriever(func() []string {
+				envVars := []string{}
+				
+				// Get config vars from Heroku
+				if configVars, err := client.ConfigVarInfoForApp(context.TODO(), appName); err == nil {
+					for key, value := range configVars {
+						if value != nil {
+							envVars = append(envVars, fmt.Sprintf("%s=%s", key, *value))
+						}
+					}
+				} else {
+					log.Warnf("Failed to retrieve config vars for %s: %v", appName, err)
+				}
+				
+				return envVars
+			})
+			
+			// Scan environment for pre-existing pipes
+			buildPipesFromEnv(r, retriever)
 		}
 	}
 

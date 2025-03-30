@@ -32,32 +32,14 @@ func init() {
 	localCmd.Flags().StringVar(&factor, "factor", "factor info", "factor info command")
 	cmd.AddCommand(localCmd)
 }
+
 func updateEnv(path string, vars map[string]*string) error {
 	envPath := filepath.Join(path, ".env")
-	content := make(map[string]string)
-
+	
 	// Read and parse the existing .env file
-	if data, err := os.Open(envPath); err == nil {
-		defer data.Close()
-		scanner := bufio.NewScanner(data)
-		for scanner.Scan() {
-			line := scanner.Text()
-			parts := strings.SplitN(line, "=", 2)
-			if len(parts) == 2 {
-				key := parts[0]
-				value := parts[1]
-				if unquotedValue, err := strconv.Unquote(value); err == nil {
-					content[key] = unquotedValue
-				} else {
-					content[key] = value // Keep the raw value if unquoting fails
-				}
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			return fmt.Errorf("error reading .env file: %w", err)
-		}
-	} else if !os.IsNotExist(err) {
-		return err // Return any error except "file does not exist"
+	content, err := parseEnvFile(envPath)
+	if err != nil {
+		return err
 	}
 
 	// Update the content with provided vars
@@ -100,6 +82,61 @@ func updateEnv(path string, vars map[string]*string) error {
 	return nil
 }
 
+// parseEnvFile reads a .env file and returns its contents as a map
+func parseEnvFile(envPath string) (map[string]string, error) {
+	content := make(map[string]string)
+	
+	// Read and parse the existing .env file
+	data, err := os.Open(envPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return content, nil // Return empty map if file doesn't exist
+		}
+		return nil, err // Return other errors
+	}
+	defer data.Close()
+	
+	scanner := bufio.NewScanner(data)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := parts[0]
+			value := parts[1]
+			if unquotedValue, err := strconv.Unquote(value); err == nil {
+				content[key] = unquotedValue
+			} else {
+				content[key] = value // Keep the raw value if unquoting fails
+			}
+		}
+	}
+	
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading .env file: %w", err)
+	}
+	
+	return content, nil
+}
+
+// getEnvFileVars reads a .env file and returns its contents as environment variable strings
+func getEnvFileVars(envPath string) []string {
+	envVars := []string{}
+	
+	// Parse the .env file
+	content, err := parseEnvFile(envPath)
+	if err != nil {
+		log.Warnf("Error reading .env file: %v", err)
+		return envVars
+	}
+	
+	// Convert to environment variable format
+	for key, value := range content {
+		envVars = append(envVars, fmt.Sprintf("%s=%s", key, value))
+	}
+	
+	return envVars
+}
+
 func getResourceLocal(path string, factor string) *Resource {
 	// Run factor meta command and capture output
 	args := strings.Fields(factor)
@@ -115,6 +152,7 @@ func getResourceLocal(path string, factor string) *Resource {
 	updater := func(name string, vars map[string]*string) error {
 		return updateEnv(path, vars)
 	}
+	
 	return getResource(name, url, iss, sub, updater)
 }
 
@@ -126,6 +164,16 @@ func runLocal() error {
 	if r == nil {
 		return fmt.Errorf("failed to get resource")
 	}
+	
+	// Create a retriever function to get environment variables
+	retriever := configRetriever(func() []string {
+		envPath := filepath.Join(path, ".env")
+		return getEnvFileVars(envPath)
+	})
+	
+	// Scan environment for pre-existing pipes
+	buildPipesFromEnv(r, retriever)
+	
 	resources := map[string]*Resource{r.ID: r}
 	return runBrokerServer("8003", resources)
 }

@@ -55,7 +55,7 @@ if [ "$euri" != "$uri" ]; then
     exit 1
 fi
 
-euri=https://cloudpipe-backend-ed95072588ce.herokuapp.com
+euri=`heroku apps:info -a cloudpipe-backend | grep "Web URL" | awk '{print $3}'`
 if [ "$euri" != "$uri" ]; then
     echo "URIs don't match: '$euri' != '$uri'"
     exit 1
